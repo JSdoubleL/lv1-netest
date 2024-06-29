@@ -17,6 +17,10 @@ func main() {
 	fmt.Println(aln)
 	sntree := SNTree(aln)
 	fmt.Println(sntree)
+	polytomies := ExtractPolytomies(sntree)
+	fmt.Println(polytomies)
+	WritePolytomies(polytomies, aln)
+
 }
 
 func parseArgs() *string {
