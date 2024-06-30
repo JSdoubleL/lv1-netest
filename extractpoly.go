@@ -73,11 +73,32 @@ func WritePolytomies(polytomies [][]string, aln align.Alignment) {
 					panic("sequence does not exist")
 				}
 			}
+			out.Alphabet()
 			nexusStr := nexus.WriteAlignment(out)
-			err = os.WriteFile(fmt.Sprintf("output/polytomy_%d_%d.nex", i, j), []byte(nexusStr), 0644)
+			err = os.WriteFile(fmt.Sprintf("output/polytomy_%d_%d.nex", i, j), []byte(fixNexus(nexusStr, i, j)), 0644)
 			if err != nil {
 				panic(fmt.Errorf("could not write file: %w", err))
 			}
 		}
 	}
+}
+
+func fixNexus(nexusStr string, i, j int) string {
+	nexusStr = strings.Replace(nexusStr, "dmension", "dimension", -1) // there's a spelling error for some reason
+	nexusStr = strings.Replace(nexusStr, "format datatype=dna;", "format datatype = standard gap = - missing = ? symbols = \" 0 1\";", -1)
+	paupBlock := fmt.Sprintf(`
+begin assumptions;
+	options deftype=unord;
+ end;
+ 
+begin paup;
+	set criterion=parsimony maxtrees=100 increase=no;
+	hsearch start=stepwise addseq=random nreps=25 swap=tbr collapse=no;
+	filter best=yes;
+	describetrees 1/diag=yes;
+	pscores all/ ci ri rc hi scorefile=polytomy_%d_%d_scores.tsv replace=yes;
+	savetrees file=polytomy_%d_%d_trees.nex replace=yes format=nexus;
+	quit;
+end;`, i, j, i, j)
+	return nexusStr + paupBlock
 }
