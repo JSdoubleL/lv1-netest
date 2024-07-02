@@ -45,10 +45,10 @@ func ExtractPolytomies(snTree *tree.Tree) [][]string {
 	return poly
 }
 
-func WritePolytomies(polytomies [][]string, aln align.Alignment) {
-	os.Mkdir("output", 0755) // TODO: let user set prefix
+func WritePolytomies(polytomies [][]string, aln align.Alignment, outdir string) {
+	os.Mkdir(outdir, 0755)
 	for i, polytomy := range polytomies {
-		err := os.WriteFile(fmt.Sprintf("output/taxa_%d.txt", i), []byte(strings.Join(polytomy, " ")), 0644)
+		err := os.WriteFile(fmt.Sprintf("%s/taxa_%d.txt", outdir, i), []byte(strings.Join(polytomy, "\n")), 0644)
 		if err != nil {
 			panic(fmt.Errorf("could not write file: %w", err))
 		}
@@ -75,7 +75,7 @@ func WritePolytomies(polytomies [][]string, aln align.Alignment) {
 			}
 			out.Alphabet()
 			nexusStr := nexus.WriteAlignment(out)
-			err = os.WriteFile(fmt.Sprintf("output/polytomy_%d_%d.nex", i, j), []byte(fixNexus(nexusStr, i, j)), 0644)
+			err = os.WriteFile(fmt.Sprintf("%s/polytomy_%d_%d.nex", outdir, i, j), []byte(fixNexus(nexusStr, i, j)), 0644)
 			if err != nil {
 				panic(fmt.Errorf("could not write file: %w", err))
 			}
