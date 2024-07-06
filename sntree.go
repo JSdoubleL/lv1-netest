@@ -15,6 +15,8 @@ func SNTree(aln align.Alignment) *tree.Tree {
 		taxaNames[i] = seq.Name()
 	}
 	snSplits := snSplits(aln)
+	fmt.Printf("sn-splits %v\n", snSplits)
+	PrintSplits(snSplits)
 	snTree, err := BuildTree(snSplits, taxaNames)
 	if err != nil {
 		panic(err)
@@ -25,27 +27,30 @@ func SNTree(aln align.Alignment) *tree.Tree {
 
 func snSplits(aln align.Alignment) []*Split {
 	splits, err := CreateSplits(aln, nil)
+	PrintSplits(splits)
 	if err != nil { // shouldn't happen
 		panic(err)
 	}
 	conflicts := make(map[int]bool)
 	// fmt.Printf("%d\n", aln.Length())
 	for i := 0; i < len(splits); i++ {
-		if !conflicts[i] {
-			for j := i + 1; j < len(splits); j++ {
-				if b, err := splits[i].Conflict(splits[j]); err != nil {
-					panic(err)
-				} else if b {
-					conflicts[i] = true
-					conflicts[j] = true
-					break
-				}
+		// if !conflicts[i] {
+		for j := i + 1; j < len(splits); j++ {
+			fmt.Println("pair", i, j)
+			if b, err := splits[i].Conflict(splits[j]); err != nil {
+				panic(err)
+			} else if b {
+				conflicts[i] = true
+				conflicts[j] = true
+				break
 			}
 		}
+		// }
 	}
 	result := []*Split{}
 	for i := range aln.Length() {
 		if !conflicts[i] {
+			fmt.Println(i)
 			result = append(result, splits[i])
 		}
 	}

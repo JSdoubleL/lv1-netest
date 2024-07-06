@@ -5,13 +5,17 @@ import (
 
 	"github.com/evolbioinfo/goalign/align"
 	"github.com/evolbioinfo/gotree/tree"
+	"github.com/fredericlemoine/bitset"
 )
 
 type Split struct {
-	split []bool
+	split *bitset.BitSet
 }
 
+// Creates list of splits from alignment.
+// Selects all sites if sites is nil.
 func CreateSplits(aln align.Alignment, sites []int) ([]*Split, error) {
+	aln.Sort()
 	if sites != nil {
 		var err error
 		if aln, err = aln.SelectSites(sites); err != nil {
@@ -20,18 +24,28 @@ func CreateSplits(aln align.Alignment, sites []int) ([]*Split, error) {
 	}
 	splits := make([]*Split, aln.Length())
 	for i := range aln.Length() {
-		splits[i] = &Split{split: make([]bool, len(aln.Sequences()))}
+		splits[i] = &Split{split: bitset.New(uint(len(aln.Sequences())))}
 	}
 	for row, seq := range aln.Sequences() {
+		fmt.Println(seq.Name())
 		for column := range aln.Length() {
-			splits[column].split[row] = seq.CharAt(column) == '1'
+			if seq.CharAt(column) == '1' {
+				splits[column].split.Set(uint(row))
+			}
 		}
 	}
 	return splits, nil
 }
 
 func (s *Split) Length() int {
-	return len(s.split)
+	// return len(s.split)
+	return int(s.split.Len())
+}
+
+func PrintSplits(ss []*Split) {
+	for _, s := range ss {
+		fmt.Println(s.split.String())
+	}
 }
 
 // could probably be optimized further
@@ -44,7 +58,7 @@ func (s1 *Split) Conflict(s2 *Split) (bool, error) {
 	conflict := false
 	for i := range s1.Length() {
 		// TODO: make sure I've checked that we're using the correct character set
-		comb[bInt[s1.split[i]]*2+bInt[s2.split[i]]] = true
+		comb[bInt[s1.split.Test(uint(i))]*2+bInt[s2.split.Test(uint(i))]] = true
 		conflict = comb[0] && comb[1] && comb[2] && comb[3]
 		if conflict {
 			break
@@ -55,12 +69,29 @@ func (s1 *Split) Conflict(s2 *Split) (bool, error) {
 
 func (s *Split) Clade(taxa []string) []string {
 	clade := make([]string, 0)
-	for i, b := range s.split {
-		if b {
+	for i := range s.split.Len() {
+		if s.split.Test(i) {
 			clade = append(clade, taxa[i])
 		}
 	}
 	return clade
+}
+
+// TODO: optimize this later
+func CountMatches(ss []*Split, split *Split) int {
+	if ss[0].Length() != split.Length() {
+		panic("split lengths not equal")
+	}
+	// fmt.Println("split", split.split.String())
+	count := 0
+	for _, s := range ss {
+		// fmt.Println("ss", s.split.String())
+		if s.split.Equal(split.split) {
+			// if s.split.EqualOrComplement(split.split) {
+			count++
+		}
+	}
+	return count
 }
 
 func BuildTree(splits []*Split, taxa []string) (*tree.Tree, error) {

@@ -23,6 +23,7 @@ func main() {
 	}
 	if args.setup {
 		sntree := SNTree(*aln)
+		fmt.Println(sntree)
 		fmt.Println("SN-Tree generated...")
 		polytomies := ExtractPolytomies(sntree)
 		fmt.Printf("%d polytomies extracted...\n", len(polytomies))
@@ -33,7 +34,10 @@ func main() {
 		fmt.Println(taxa)
 		bestTrees := ReadPAUPResults(args.polytomyDir, uint(len(taxa)))
 		fmt.Println(taxa, bestTrees)
-		// result := CloseCycle(bestTree, taxa, aln)
+		for i, t := range bestTrees {
+			result := CloseCycle(t, taxa[i], *aln)
+			fmt.Println(result)
+		}
 	}
 }
 
