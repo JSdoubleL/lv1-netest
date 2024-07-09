@@ -86,8 +86,8 @@ func CountMatches(ss []*Split, split *Split) int {
 	count := 0
 	for _, s := range ss {
 		// fmt.Println("ss", s.split.String())
-		if s.split.Equal(split.split) {
-			// if s.split.EqualOrComplement(split.split) {
+		// if s.split.Equal(split.split) {
+		if s.split.EqualOrComplement(split.split) {
 			count++
 		}
 	}
@@ -110,12 +110,15 @@ func BuildTree(splits []*Split, taxa []string) (*tree.Tree, error) {
 	if len(taxa) != i {
 		panic("there should be as many leaves in the star tree as taxa")
 	}
+	fmt.Print("build tree")
+	PrintSplits(splits)
 	for _, s := range splits {
+		fmt.Println(s)
 		fmt.Println(s.Clade(taxa))
 		fmt.Println(taxa)
 		clade := s.Clade(taxa)
 		if len(clade) == 0 || len(clade) == 1 || len(clade) == len(taxa) || len(clade) == len(taxa)-1 {
-			break // not a bipartition if all taxa are on one side, also don't include trivial bipartitions (we already have them)
+			continue // not a bipartition if all taxa are on one side, also don't include trivial bipartitions (we already have them)
 		}
 		node, edges, monophyletic, err := starTree.LeastCommonAncestorUnrooted(nil, s.Clade(taxa)...)
 		if err != nil {

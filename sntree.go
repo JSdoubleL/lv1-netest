@@ -42,7 +42,7 @@ func snSplits(aln align.Alignment) []*Split {
 			} else if b {
 				conflicts[i] = true
 				conflicts[j] = true
-				break
+				// break
 			}
 		}
 		// }

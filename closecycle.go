@@ -140,6 +140,7 @@ func CloseCycle(bestTree *tree.Tree, taxa []string, aln align.Alignment) []*tree
 	// for _, n := range bestTree.SortedTips() {
 	// 	fmt.Println(n.Name())
 	// }
+	slices.Sort(taxa)
 	x := 0
 	for i, t := range taxa {
 		if !slices.Contains(bestTree.AllTipNames(), t) {
@@ -162,11 +163,16 @@ func CloseCycle(bestTree *tree.Tree, taxa []string, aln align.Alignment) []*tree
 	fmt.Println(postorderPass)
 	fmt.Println(preorderPass)
 
+	backbone := findBackbone(bestTree, edgeScores, postorderPass, preorderPass)
+	fmt.Println(backbone)
+
 	return []*tree.Tree{}
 }
 
 func preprocessEdgeScores(bestTree *tree.Tree, splits []*Split, x int) [][2]int {
 	scores := make([][2]int, len(bestTree.Edges()))
+	fmt.Print("splits")
+	PrintSplits(splits)
 	bestTree.PostOrder(func(cur, prev *tree.Node, e *tree.Edge) (keep bool) {
 		if cur != bestTree.Root() {
 			scores[e.Id()] = scoreEdge(e, splits, x)
@@ -182,7 +188,7 @@ func scoreEdge(e *tree.Edge, splits []*Split, x int) [2]int {
 	// 	return [2]int{0, 0}
 	// }
 	ogBitset := e.Bitset()
-	// fmt.Println(ogBitset.String())
+	fmt.Println("ogbitset", ogBitset.String())
 	if ogBitset == nil {
 		panic("bitset is nil")
 	}
@@ -197,9 +203,9 @@ func scoreEdge(e *tree.Edge, splits []*Split, x int) [2]int {
 		}
 	}
 	xRight.Set(uint(x))
-	// fmt.Println("left", xLeft.String())
-	// fmt.Println("right", xRight.String())
-	// fmt.Println("x", x)
+	fmt.Println("left", xLeft.String())
+	fmt.Println("right", xRight.String())
+	fmt.Println("x", x)
 	return [2]int{CountMatches(splits, &Split{split: xLeft}), CountMatches(splits, &Split{split: xRight})}
 }
 
@@ -253,7 +259,7 @@ func preorderScore(bestTree *tree.Tree, scores [][2]int, postorderScores []int) 
 	result := make([]int, len(bestTree.Edges())+1)
 	root := bestTree.Root()
 	bestTree.PreOrder(func(cur, prev *tree.Node, e *tree.Edge) (keep bool) {
-		if bestTree.Root() == cur { // root has no corresponding edge
+		if root == cur { // root has no corresponding edge
 			return true
 		}
 		if (e.Left() != cur && e.Right() != cur) || (e.Left() != prev && e.Right() != prev) {
@@ -264,6 +270,10 @@ func preorderScore(bestTree *tree.Tree, scores [][2]int, postorderScores []int) 
 		} else if p != prev {
 			panic("prev is not parent of cur")
 		}
+		p, err := prev.Parent()
+		if err != nil && err.Error() == "The node has more than one parent" {
+			panic(err)
+		}
 		if e.Left() == cur {
 			result[e.Id()] = scores[e.Id()][0]
 		} else {
@@ -273,8 +283,10 @@ func preorderScore(bestTree *tree.Tree, scores [][2]int, postorderScores []int) 
 		for _, edge := range edges {
 			if prev == root {
 				result[e.Id()] += postorderScores[edge.Id()]
-			} else {
+			} else if edge.Left() == p || edge.Right() == p {
 				result[e.Id()] += result[edge.Id()]
+			} else {
+				result[e.Id()] += postorderScores[edge.Id()]
 			}
 		}
 		return true
@@ -318,6 +330,108 @@ func preorderEdges(node, root *tree.Node) []*tree.Edge {
 	}
 	if len(result) != 2 {
 		panic(fmt.Errorf("preorder edge finder did not return the expected number of edges. Returned %d edges; root %t", len(result), p == root))
+	}
+	return result
+}
+
+func findBackbone(bestTree *tree.Tree, edgeScores [][2]int, post, pre []int) [2]int {
+	scoresPost := make([]int, len(edgeScores)) // score if backbone ends at the index
+	postStarts := make([]int, len(edgeScores)) // edge ids for where backbone starts if it ends at the index
+	root := bestTree.Root()
+	bestTree.PostOrder(func(cur, prev *tree.Node, e *tree.Edge) (keep bool) {
+		if cur == root { // no edge
+			return true
+		}
+		score := edgeScores[e.Id()][0] + edgeScores[e.Id()][1]
+		if cur.Tip() {
+			scoresPost[e.Id()] = score
+			postStarts[e.Id()] = e.Id()
+			return true
+		}
+		children := childEdges(cur)
+		left := score + scoresPost[children[0].Id()] + post[children[1].Id()]
+		right := score + scoresPost[children[1].Id()] + post[children[0].Id()]
+		startAtCur := score + post[children[1].Id()] + post[children[0].Id()]
+		if startAtCur >= left && startAtCur >= right {
+			scoresPost[e.Id()] = score
+			postStarts[e.Id()] = e.Id()
+		} else if left >= right {
+			scoresPost[e.Id()] = left
+			postStarts[e.Id()] = postStarts[children[0].Id()]
+		} else {
+			scoresPost[e.Id()] = right
+			postStarts[e.Id()] = postStarts[children[1].Id()]
+		}
+		return true
+	})
+	scoresPre := make([]int, len(edgeScores))
+	preStarts := make([]int, len(edgeScores))
+	bestTree.PreOrder(func(cur, prev *tree.Node, e *tree.Edge) (keep bool) {
+		if cur == root { // no edge
+			return true
+		}
+		score := edgeScores[e.Id()][0] + edgeScores[e.Id()][1]
+		if prev == root {
+			edges := preorderEdges(cur, root)
+			left := score + scoresPost[edges[0].Id()] + post[edges[1].Id()]
+			right := score + scoresPost[edges[1].Id()] + post[edges[0].Id()]
+			if left >= right {
+				scoresPost[e.Id()] = left
+				preStarts[e.Id()] = postStarts[edges[0].Id()]
+			} else {
+				scoresPost[e.Id()] = right
+				preStarts[e.Id()] = postStarts[edges[1].Id()]
+			}
+		} else {
+			edges := preorderEdges(cur, root)
+			p, err := prev.Parent()
+			if err != nil && err.Error() == "The node has more than one parent" {
+				panic(err)
+			}
+			if edges[0].Left() == p || edges[0].Right() == p {
+				score += scoresPre[edges[0].Id()] + post[edges[1].Id()]
+				preStarts[e.Id()] = preStarts[edges[0].Id()]
+			} else {
+				score += scoresPre[edges[1].Id()] + post[edges[0].Id()]
+				preStarts[e.Id()] = preStarts[edges[1].Id()]
+			}
+		}
+		return true
+	})
+
+	// find maximum over all possible backbones
+	maxScore := 0            // best possible score for a backbone
+	maxStart, maxEnd := 0, 0 // ids of best start and end point edges
+	for i, s := range scoresPost {
+		totalScore := s + pre[i] // need to add on subtree to end of path to get real total score
+		if totalScore >= maxScore {
+			maxScore = totalScore
+			maxStart, maxEnd = postStarts[i], i
+		}
+	}
+	for i, s := range scoresPre {
+		totalScore := s + post[i]
+		if totalScore >= maxScore {
+			maxScore = totalScore
+			maxStart, maxEnd = preStarts[i], i
+		}
+	}
+	// I need to fix the bug in the preorder preprocess bit
+	return [2]int{maxStart, maxEnd}
+}
+
+func childEdges(node *tree.Node) []*tree.Edge {
+	children := children(node)
+	result := make([]*tree.Edge, 0)
+	for _, c := range children {
+		for _, e := range c.Edges() {
+			if e.Left() == node || e.Right() == node {
+				result = append(result, e)
+			}
+		}
+	}
+	if len(result) != 2 {
+		panic(fmt.Sprintf("did not find two edges, found %d", len(result)))
 	}
 	return result
 }
