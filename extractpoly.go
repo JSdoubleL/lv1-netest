@@ -12,17 +12,11 @@ import (
 
 func ExtractPolytomies(snTree *tree.Tree) [][]string {
 	snTree.ReinitInternalIndexes()
-	// err := snTree.UpdateBitSet()
-	// if err != nil {
-	// 	panic(err)
-	// }
 	poly := make([][]string, 0) // list of polytomies, represented as list of their taxa labels
 	taxaNames := snTree.SortedTips()
 	snTree.PostOrder(func(cur, prev *tree.Node, e *tree.Edge) (keep bool) {
 		if cur.Nneigh() > 3 {
-			if len(cur.Edges()) != cur.Nneigh() {
-				panic("assert fail") // remove if this doesn't trip
-			}
+			cur.SetName(fmt.Sprintf("polytomy_%d", len(poly)))
 			poly = append(poly, make([]string, 0))
 			for _, edge := range cur.Edges() {
 				split := edge.Bitset()
@@ -73,7 +67,7 @@ func WritePolytomies(polytomies [][]string, aln align.Alignment, outdir string) 
 					panic("sequence does not exist")
 				}
 			}
-			out.Alphabet()
+			// out.Alphabet()
 			nexusStr := nexus.WriteAlignment(out)
 			err = os.WriteFile(fmt.Sprintf("%s/polytomy_%d_%d.nex", outdir, i, j), []byte(fixNexus(nexusStr, i, j)), 0644)
 			if err != nil {

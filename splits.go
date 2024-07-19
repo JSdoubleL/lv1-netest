@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/evolbioinfo/goalign/align"
 	"github.com/evolbioinfo/gotree/tree"
@@ -22,20 +23,61 @@ func CreateSplits(aln align.Alignment, sites []int) ([]*Split, error) {
 			return nil, fmt.Errorf("cannot create splits: %w", err)
 		}
 	}
-	splits := make([]*Split, aln.Length())
+	splits := make([]*bitset.BitSet, aln.Length())
 	for i := range aln.Length() {
-		splits[i] = &Split{split: bitset.New(uint(len(aln.Sequences())))}
+		splits[i] = bitset.New(uint(len(aln.Sequences())))
 	}
 	for row, seq := range aln.Sequences() {
 		fmt.Println(seq.Name())
 		for column := range aln.Length() {
 			if seq.CharAt(column) == '1' {
-				splits[column].split.Set(uint(row))
+				splits[column].Set(uint(row))
 			}
 		}
 	}
-	return splits, nil
+	result := make([]*Split, 0)
+	for _, bs := range splits {
+		if bs.Count() > 1 && bs.Count() < uint(len(aln.Sequences())-1) { // only include non-trivial splits
+			result = append(result, &Split{split: bs})
+		}
+	}
+	return result, nil
 }
+
+func SplitsFromTree(tree *tree.Tree) []*Split {
+	result := make([]*Split, 0)
+	for _, e := range tree.Edges() {
+		result = append(result, &Split{split: e.Bitset()})
+	}
+	return result
+}
+
+// // Creates list of splits from alignment.
+// // Selects all sites if sites is nil.
+// func CreateSplits(aln align.Alignment, sites []int) ([]*Split, error) {
+// 	aln.Sort()
+// 	if sites != nil {
+// 		var err error
+// 		if aln, err = aln.SelectSites(sites); err != nil {
+// 			return nil, fmt.Errorf("cannot create splits: %w", err)
+// 		}
+// 	}
+// 	//
+// 	splits := make([]*Split, aln.Length())
+// 	for i := range aln.Length() {
+// 		splits[i] = &Split{split: bitset.New(uint(len(aln.Sequences())))}
+// 	}
+// 	// splits[0].split.Count()
+// 	for row, seq := range aln.Sequences() {
+// 		fmt.Println(seq.Name())
+// 		for column := range aln.Length() {
+// 			if seq.CharAt(column) == '1' {
+// 				splits[column].split.Set(uint(row))
+// 			}
+// 		}
+// 	}
+// 	return splits, nil
+// }
 
 func (s *Split) Length() int {
 	// return len(s.split)
@@ -68,6 +110,7 @@ func (s1 *Split) Conflict(s2 *Split) (bool, error) {
 }
 
 func (s *Split) Clade(taxa []string) []string {
+	slices.Sort(taxa)
 	clade := make([]string, 0)
 	for i := range s.split.Len() {
 		if s.split.Test(i) {

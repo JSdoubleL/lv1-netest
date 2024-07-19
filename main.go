@@ -4,9 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/evolbioinfo/goalign/align"
 	"github.com/evolbioinfo/goalign/io/nexus"
+	"github.com/evolbioinfo/gotree/io/newick"
+	"github.com/evolbioinfo/gotree/tree"
 )
 
 type args struct {
@@ -28,16 +31,22 @@ func main() {
 		polytomies := ExtractPolytomies(sntree)
 		fmt.Printf("%d polytomies extracted...\n", len(polytomies))
 		WritePolytomies(polytomies, *aln, args.polytomyDir)
+		WriteTree(fmt.Sprintf("%s/sntree.nwk", args.polytomyDir), sntree, false)
 		fmt.Println("done.")
 	} else {
 		taxa := ReadTaxa(args.polytomyDir)
+		sntree := ReadTree(fmt.Sprintf("%s/sntree.nwk", args.polytomyDir))
 		fmt.Println(taxa)
 		bestTrees := ReadPAUPResults(args.polytomyDir, uint(len(taxa)))
 		fmt.Println(taxa, bestTrees)
+		cycles := make([]*tree.Tree, len(bestTrees))
 		for i, t := range bestTrees {
-			result := CloseCycle(t, taxa[i], *aln)
+			result := CloseCycle(t, taxa[i], *aln, i)
+			cycles[i] = result
 			fmt.Println(result)
 		}
+		finalNetwork := AssembleNetwork(sntree, cycles)
+		WriteTree(fmt.Sprintf("%s/final_network.nwk", args.polytomyDir), finalNetwork, true)
 	}
 }
 
@@ -63,4 +72,36 @@ func readAlignment(alnFile string) (*align.Alignment, error) {
 	defer f.Close()
 	aln, err := nexus.NewParser(f).Parse()
 	return &aln, err
+}
+
+func WriteTree(name string, t *tree.Tree, network bool) {
+	var nwk string
+	if network {
+		nwk = fixNetwork(t.Newick())
+	} else {
+		nwk = t.Newick()
+	}
+	err := os.WriteFile(name, []byte(nwk), 0644)
+	if err != nil {
+		panic(fmt.Errorf("could not write file: %w", err))
+	}
+}
+
+func ReadTree(name string) *tree.Tree {
+	f, err := os.Open(name)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	t, err := newick.NewParser(f).Parse()
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+func fixNetwork(nwk string) string {
+	nwk = strings.ReplaceAll(nwk, "[", "")
+	nwk = strings.ReplaceAll(nwk, "]", "")
+	return nwk
 }

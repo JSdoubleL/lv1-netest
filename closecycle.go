@@ -132,7 +132,7 @@ func getSubalignment(aln align.Alignment, taxa []string) align.Alignment {
 	return subaln
 }
 
-func CloseCycle(bestTree *tree.Tree, taxa []string, aln align.Alignment) []*tree.Tree {
+func CloseCycle(bestTree *tree.Tree, taxa []string, aln align.Alignment, n int) *tree.Tree {
 	// if !slices.IsSorted(taxa) { // make sure the bitset order matches between tree alignment
 	// 	panic("my assumption that taxa are sorted is wrong")
 	// }
@@ -165,8 +165,8 @@ func CloseCycle(bestTree *tree.Tree, taxa []string, aln align.Alignment) []*tree
 
 	backbone := findBackbone(bestTree, edgeScores, postorderPass, preorderPass)
 	fmt.Println(backbone)
-
-	return []*tree.Tree{}
+	attachTaxa(bestTree, backbone, taxa[x], createLabel(n))
+	return bestTree
 }
 
 func preprocessEdgeScores(bestTree *tree.Tree, splits []*Split, x int) [][2]int {
@@ -432,6 +432,42 @@ func childEdges(node *tree.Node) []*tree.Edge {
 	}
 	if len(result) != 2 {
 		panic(fmt.Sprintf("did not find two edges, found %d", len(result)))
+	}
+	return result
+}
+
+func attachTaxa(bestTree *tree.Tree, backbone [2]int, taxaX, label string) {
+	// bifurcate the first edge, adding labeled internal vertex aattachment point
+	// then do the same for the second, but add the attachment point as a leaf
+	edges := bestTree.Edges()
+	x := bestTree.NewNode()
+	x.SetName(taxaX)
+	bestTree.GraftTipOnEdge(x, edges[backbone[0]])
+	// I cannot figure out how to simply add an interanl vertex to a bestTree
+	// (it might not even be possible), so I'm just adding a comment, then I'll edit the newick string
+
+	// code to add network edge labels
+	// e := x.Edges()[0]
+	// e.AddComment(label)
+	// if backbone[0] != edges[backbone[0]].Id() {
+	// 	panic("wrong edge")
+	// }
+	// tip := bestTree.NewNode()
+	// tip.SetName(label)
+	// bestTree.GraftTipOnEdge(tip, edges[backbone[1]])
+}
+
+func createLabel(i int) string {
+	return fmt.Sprintf("%s#R%d", intToAlphabet(uint(i)), i)
+
+}
+
+func intToAlphabet(n uint) string {
+	result := ""
+	for n > 0 {
+		remainder := n % 26
+		result = string('A'+remainder) + result
+		n = n / 26
 	}
 	return result
 }

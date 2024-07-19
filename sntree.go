@@ -10,6 +10,7 @@ import (
 func SNTree(aln align.Alignment) *tree.Tree {
 	// filter out sites with more than two characters
 	// create tree, then add bipartitions per unique, non-conflicting site.
+	aln.Sort()
 	taxaNames := make([]string, len(aln.Sequences()))
 	for i, seq := range aln.Sequences() {
 		taxaNames[i] = seq.Name()
@@ -48,7 +49,7 @@ func snSplits(aln align.Alignment) []*Split {
 		// }
 	}
 	result := []*Split{}
-	for i := range aln.Length() {
+	for i := range len(splits) {
 		if !conflicts[i] {
 			fmt.Println(i)
 			result = append(result, splits[i])
