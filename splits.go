@@ -120,6 +120,20 @@ func (s *Split) Clade(taxa []string) []string {
 	return clade
 }
 
+func GetClade(bs bitset.BitSet, taxa []string, complement bool) []string {
+	slices.Sort(taxa)
+	clade := make([]string, 0)
+	if complement {
+		bs = *bs.Complement()
+	}
+	for i := range bs.Len() {
+		if bs.Test(i) {
+			clade = append(clade, taxa[i])
+		}
+	}
+	return clade
+}
+
 // TODO: optimize this later
 func CountMatches(ss []*Split, split *Split) int {
 	if ss[0].Length() != split.Length() {

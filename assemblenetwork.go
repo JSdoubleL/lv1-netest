@@ -2,21 +2,30 @@ package main
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/evolbioinfo/gotree/tree"
 )
 
 func AssembleNetwork(sntree *tree.Tree, cycles []*tree.Tree) *tree.Tree {
+	sntree.ReinitIndexes()
 	// var cur *tree.Tree
 	fmt.Println(cycles)
 	newSplits := make([][]string, 0)
-	for _, c := range cycles {
+	taxaNames := sntree.AllTipNames()
+	slices.Sort(taxaNames)
+	nameToID := make(map[string]int)
+	for i, t := range taxaNames {
+		nameToID[t] = i
+	}
+	for i, c := range cycles {
 		c.ReinitIndexes()
 		splits := SplitsFromTree(c)
 		PrintSplits(splits)
 		for _, s := range splits {
 			fmt.Println("split", s.Clade(c.AllTipNames()))
-			newSplits = append(newSplits, s.Clade(c.AllTipNames()))
+			fmt.Println("expand", expandSplits(sntree, nameToID, s.Clade(c.AllTipNames()), i))
+			newSplits = append(newSplits, expandSplits(sntree, nameToID, s.Clade(c.AllTipNames()), i))
 		}
 	}
 	for _, clade := range newSplits {
@@ -28,6 +37,43 @@ func AssembleNetwork(sntree *tree.Tree, cycles []*tree.Tree) *tree.Tree {
 		sntree.AddBipartition(poly, edges, 1, 1)
 	}
 	return sntree
+}
+
+func expandSplits(sntree *tree.Tree, nameToID map[string]int, ogSplit []string, n int) []string {
+	//get polytomy
+	//map each taxon to an edge
+	//expand split to include new taxa - consider root edge case
+	search, err := sntree.SelectNodes(fmt.Sprintf("polytomy_%d", n))
+	// fmt.Println(fmt.Sprintf("polytomy_%d", n))
+	if err != nil {
+		panic(err)
+	}
+	if len(search) != 1 {
+		fmt.Println(sntree.Newick())
+		fmt.Println(search)
+		panic("multiple (or none) nodes match polytomy name")
+	}
+	poly := search[0]
+	result := make([]string, 0)
+	for _, taxon := range ogSplit {
+		subtaxa := make([]string, 0)
+		var parentEdge *tree.Edge
+		for _, e := range poly.Edges() {
+			if e.Left() == poly && e.Bitset().Test(uint(nameToID[taxon])) {
+				subtaxa = append(subtaxa, GetClade(*e.Bitset(), sntree.AllTipNames(), false)...)
+				// } else if e.Bitset().Test(uint(nameToID[taxon])) {
+				// 	result = append(result, GetClade(*e.Bitset(), sntree.AllTipNames(), false)...)
+			}
+			if e.Right() == poly {
+				parentEdge = e
+			}
+		}
+		if len(subtaxa) == 0 {
+			subtaxa = append(subtaxa, GetClade(*parentEdge.Bitset(), sntree.AllTipNames(), true)...)
+		}
+		result = append(result, subtaxa...)
+	}
+	return result
 }
 
 // func getSplits(sntree, cycle *tree.Tree, n int) []string {
