@@ -364,6 +364,7 @@ func findBackbone(bestTree *tree.Tree, edgeScores [][2]int, post, pre []int) [2]
 		}
 		return true
 	})
+	fmt.Println("post scores", scoresPost)
 	scoresPre := make([]int, len(edgeScores))
 	preStarts := make([]int, len(edgeScores))
 	bestTree.PreOrder(func(cur, prev *tree.Node, e *tree.Edge) (keep bool) {
@@ -371,19 +372,20 @@ func findBackbone(bestTree *tree.Tree, edgeScores [][2]int, post, pre []int) [2]
 			return true
 		}
 		score := edgeScores[e.Id()][0] + edgeScores[e.Id()][1]
+		edges := preorderEdges(cur, root)
 		if prev == root {
-			edges := preorderEdges(cur, root)
+			// fmt.Printf("HERE!! %d\n", root.Nneigh())
 			left := score + scoresPost[edges[0].Id()] + post[edges[1].Id()]
 			right := score + scoresPost[edges[1].Id()] + post[edges[0].Id()]
+			fmt.Printf("root: left %d, right %d\n", left, right)
 			if left >= right {
-				scoresPost[e.Id()] = left
+				scoresPre[e.Id()] = left
 				preStarts[e.Id()] = postStarts[edges[0].Id()]
 			} else {
-				scoresPost[e.Id()] = right
+				scoresPre[e.Id()] = right
 				preStarts[e.Id()] = postStarts[edges[1].Id()]
 			}
 		} else {
-			edges := preorderEdges(cur, root)
 			p, err := prev.Parent()
 			if err != nil && err.Error() == "The node has more than one parent" {
 				panic(err)
@@ -395,9 +397,11 @@ func findBackbone(bestTree *tree.Tree, edgeScores [][2]int, post, pre []int) [2]
 				score += scoresPre[edges[1].Id()] + post[edges[0].Id()]
 				preStarts[e.Id()] = preStarts[edges[1].Id()]
 			}
+			scoresPre[e.Id()] = score
 		}
 		return true
 	})
+	fmt.Println("pre scores", scoresPre)
 
 	// find maximum over all possible backbones
 	maxScore := 0            // best possible score for a backbone
