@@ -93,8 +93,8 @@ func readPolytomy(dir string, i uint) *tree.Tree {
 	fmt.Println(candidates)
 	bestTree, bestScore := -1, -1
 	for k, v := range candidates {
-		if v[1] < bestScore || bestScore == -1 {
-			bestTree, bestScore = k, v[1]
+		if v[2] > bestScore || bestScore == -1 {
+			bestTree, bestScore = k, v[2]
 		}
 	}
 	fmt.Printf("best score for polytomy %d is %d\n", i, bestScore)
