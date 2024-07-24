@@ -57,7 +57,7 @@ func WritePolytomies(polytomies [][]string, aln align.Alignment, outdir string) 
 				}
 			}
 			// subsetTaxa := append(polytomy[:j], polytomy[j+1:]...)
-			fmt.Println(subsetTaxa)
+			// fmt.Println(subsetTaxa)
 			out := align.NewAlign(align.UNKNOWN)
 			for _, seqName := range subsetTaxa {
 				seq, exists := aln.GetSequenceByName(seqName)

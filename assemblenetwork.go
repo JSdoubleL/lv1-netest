@@ -10,7 +10,7 @@ import (
 func AssembleNetwork(sntree *tree.Tree, cycles []*tree.Tree) *tree.Tree {
 	sntree.ReinitIndexes()
 	// var cur *tree.Tree
-	fmt.Println(cycles)
+	// fmt.Println(cycles)
 	newSplits := make([][]string, 0)
 	taxaNames := sntree.AllTipNames()
 	slices.Sort(taxaNames)
@@ -21,10 +21,10 @@ func AssembleNetwork(sntree *tree.Tree, cycles []*tree.Tree) *tree.Tree {
 	for i, c := range cycles {
 		c.ReinitIndexes()
 		splits := SplitsFromTree(c)
-		PrintSplits(splits)
+		// PrintSplits(splits)
 		for _, s := range splits {
-			fmt.Println("split", s.Clade(c.AllTipNames()))
-			fmt.Println("expand", expandSplits(sntree, nameToID, s.Clade(c.AllTipNames()), i))
+			// fmt.Println("split", s.Clade(c.AllTipNames()))
+			// fmt.Println("expand", expandSplits(sntree, nameToID, s.Clade(c.AllTipNames()), i))
 			newSplits = append(newSplits, expandSplits(sntree, nameToID, s.Clade(c.AllTipNames()), i))
 		}
 	}
@@ -49,8 +49,8 @@ func expandSplits(sntree *tree.Tree, nameToID map[string]int, ogSplit []string, 
 		panic(err)
 	}
 	if len(search) != 1 {
-		fmt.Println(sntree.Newick())
-		fmt.Println(search)
+		// fmt.Println(sntree.Newick())
+		// fmt.Println(search)
 		panic("multiple (or none) nodes match polytomy name")
 	}
 	poly := search[0]

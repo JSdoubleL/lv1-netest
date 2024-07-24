@@ -1,6 +1,0 @@
-taxon_1
-taxon_2
-taxon_3
-taxon_4
-taxon_5
-taxon_6

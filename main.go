@@ -26,7 +26,7 @@ func main() {
 	}
 	if args.setup {
 		sntree := SNTree(*aln)
-		fmt.Println(sntree)
+		// fmt.Println(sntree)
 		fmt.Println("SN-Tree generated...")
 		polytomies := ExtractPolytomies(sntree)
 		fmt.Printf("%d polytomies extracted...\n", len(polytomies))
@@ -36,17 +36,20 @@ func main() {
 	} else {
 		taxa := ReadTaxa(args.polytomyDir)
 		sntree := ReadTree(fmt.Sprintf("%s/sntree.nwk", args.polytomyDir))
-		fmt.Println(taxa)
+		// fmt.Println(taxa)
 		bestTrees := ReadPAUPResults(args.polytomyDir, uint(len(taxa)))
-		fmt.Println(taxa, bestTrees)
+		// fmt.Println(taxa, bestTrees)
+		fmt.Println("PAUP* results read...")
 		cycles := make([]*tree.Tree, len(bestTrees))
 		for i, t := range bestTrees {
 			result := CloseCycle(t, taxa[i], *aln, i)
 			cycles[i] = result
-			fmt.Println(result)
+			// fmt.Println(result)
 		}
+		fmt.Println("cycles closed...")
 		finalNetwork := AssembleNetwork(sntree, cycles)
 		WriteTree(fmt.Sprintf("%s/final_network.nwk", args.polytomyDir), finalNetwork, true)
+		fmt.Printf("result written to %s/final_network.nwk", args.polytomyDir)
 	}
 }
 

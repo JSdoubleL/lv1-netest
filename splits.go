@@ -28,7 +28,7 @@ func CreateSplits(aln align.Alignment, sites []int) ([]*Split, error) {
 		splits[i] = bitset.New(uint(len(aln.Sequences())))
 	}
 	for row, seq := range aln.Sequences() {
-		fmt.Println(seq.Name())
+		// fmt.Println(seq.Name())
 		for column := range aln.Length() {
 			if seq.CharAt(column) == '1' {
 				splits[column].Set(uint(row))
@@ -84,11 +84,11 @@ func (s *Split) Length() int {
 	return int(s.split.Len())
 }
 
-func PrintSplits(ss []*Split) {
-	for _, s := range ss {
-		fmt.Println(s.split.String())
-	}
-}
+// func PrintSplits(ss []*Split) {
+// 	for _, s := range ss {
+// 		fmt.Println(s.split.String())
+// 	}
+// }
 
 // could probably be optimized further
 func (s1 *Split) Conflict(s2 *Split) (bool, error) {
@@ -167,12 +167,12 @@ func BuildTree(splits []*Split, taxa []string) (*tree.Tree, error) {
 	if len(taxa) != i {
 		panic("there should be as many leaves in the star tree as taxa")
 	}
-	fmt.Print("build tree")
-	PrintSplits(splits)
+	// fmt.Print("build tree")
+	// PrintSplits(splits)
 	for _, s := range splits {
-		fmt.Println(s)
-		fmt.Println(s.Clade(taxa))
-		fmt.Println(taxa)
+		// fmt.Println(s)
+		// fmt.Println(s.Clade(taxa))
+		// fmt.Println(taxa)
 		clade := s.Clade(taxa)
 		if len(clade) == 0 || len(clade) == 1 || len(clade) == len(taxa) || len(clade) == len(taxa)-1 {
 			continue // not a bipartition if all taxa are on one side, also don't include trivial bipartitions (we already have them)

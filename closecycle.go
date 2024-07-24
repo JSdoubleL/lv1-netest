@@ -24,7 +24,7 @@ func ReadTaxa(dir string) map[int][]string {
 	var id int
 	for _, file := range files {
 		if nMatch, err := fmt.Sscanf(file.Name(), "taxa_%d.txt", &id); err != nil {
-			fmt.Println(file.Name(), nMatch, id)
+			// fmt.Println(file.Name(), nMatch, id)
 			// panic(err)
 			continue
 		} else if nMatch != 1 {
@@ -62,7 +62,7 @@ func readPolytomy(dir string, i uint) *tree.Tree {
 		} else if nMatch != 1 {
 			panic("expected to match 2 values")
 		} else {
-			fmt.Println(file.Name())
+			// fmt.Println(file.Name())
 			filePointer, err := os.Open(filepath.Join(dir, file.Name()))
 			if err != nil {
 				panic(err)
@@ -78,10 +78,11 @@ func readPolytomy(dir string, i uint) *tree.Tree {
 			maxTree, maxVal := -1, -1
 			for k, record := range records {
 				if k != 0 { // skip header
-					curVal, err := strconv.Atoi(record[1])
+					fval, err := strconv.ParseFloat(record[2], 64)
 					if err != nil {
 						panic(err)
 					}
+					curVal := int(100 * fval)
 					if curVal < maxVal || maxVal == -1 {
 						maxTree, maxVal = k-1, curVal // -1 as we don't count the heade
 					}
@@ -90,14 +91,15 @@ func readPolytomy(dir string, i uint) *tree.Tree {
 			candidates[j] = []int{maxTree, maxVal}
 		}
 	}
-	fmt.Println(candidates)
+	// fmt.Println(candidates)
 	bestTree, bestScore := -1, -1
 	for k, v := range candidates {
-		if v[2] > bestScore || bestScore == -1 {
-			bestTree, bestScore = k, v[2]
+		// fmt.Println(v)
+		if v[1] > bestScore || bestScore == -1 {
+			bestTree, bestScore = k, v[1]
 		}
 	}
-	fmt.Printf("best score for polytomy %d is %d\n", i, bestScore)
+	// fmt.Printf("best score for polytomy %d is %d\n", i, bestScore)
 	// read tree
 	treeFile, err := os.Open(fmt.Sprintf("%s/polytomy_%d_%d_trees.nex", dir, i, bestTree))
 	if err != nil {
@@ -107,7 +109,7 @@ func readPolytomy(dir string, i uint) *tree.Tree {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(nxs)
+	// fmt.Println(nxs)
 	var result *tree.Tree
 	tIndex := 0
 	nxs.IterateTrees(func(s string, t *tree.Tree) { // I don't think there's a better way to get the nth tree with this library
@@ -156,23 +158,23 @@ func CloseCycle(bestTree *tree.Tree, taxa []string, aln align.Alignment, n int) 
 		panic(err)
 	}
 	edgeScores := preprocessEdgeScores(bestTree, splits, x)
-	fmt.Println("edge scores", edgeScores)
+	// fmt.Println("edge scores", edgeScores)
 	// postorder and preorder pass scores (assuming edges are not part of backbone)
 	postorderPass := postorderScore(bestTree, edgeScores)
 	preorderPass := preorderScore(bestTree, edgeScores, postorderPass)
-	fmt.Println(postorderPass)
-	fmt.Println(preorderPass)
+	// fmt.Println(postorderPass)
+	// fmt.Println(preorderPass)
 
 	backbone := findBackbone(bestTree, edgeScores, postorderPass, preorderPass)
-	fmt.Println(backbone)
+	// fmt.Println(backbone)
 	attachTaxa(bestTree, backbone, taxa[x], createLabel(n))
 	return bestTree
 }
 
 func preprocessEdgeScores(bestTree *tree.Tree, splits []*Split, x int) [][2]int {
 	scores := make([][2]int, len(bestTree.Edges()))
-	fmt.Print("splits")
-	PrintSplits(splits)
+	// fmt.Print("splits")
+	// PrintSplits(splits)
 	bestTree.PostOrder(func(cur, prev *tree.Node, e *tree.Edge) (keep bool) {
 		if cur != bestTree.Root() {
 			scores[e.Id()] = scoreEdge(e, splits, x)
@@ -188,7 +190,7 @@ func scoreEdge(e *tree.Edge, splits []*Split, x int) [2]int {
 	// 	return [2]int{0, 0}
 	// }
 	ogBitset := e.Bitset()
-	fmt.Println("ogbitset", ogBitset.String())
+	// fmt.Println("ogbitset", ogBitset.String())
 	if ogBitset == nil {
 		panic("bitset is nil")
 	}
@@ -203,9 +205,9 @@ func scoreEdge(e *tree.Edge, splits []*Split, x int) [2]int {
 		}
 	}
 	xRight.Set(uint(x))
-	fmt.Println("left", xLeft.String())
-	fmt.Println("right", xRight.String())
-	fmt.Println("x", x)
+	// fmt.Println("left", xLeft.String())
+	// fmt.Println("right", xRight.String())
+	// fmt.Println("x", x)
 	return [2]int{CountMatches(splits, &Split{split: xLeft}), CountMatches(splits, &Split{split: xRight})}
 }
 
@@ -364,7 +366,7 @@ func findBackbone(bestTree *tree.Tree, edgeScores [][2]int, post, pre []int) [2]
 		}
 		return true
 	})
-	fmt.Println("post scores", scoresPost)
+	// fmt.Println("post scores", scoresPost)
 	scoresPre := make([]int, len(edgeScores))
 	preStarts := make([]int, len(edgeScores))
 	bestTree.PreOrder(func(cur, prev *tree.Node, e *tree.Edge) (keep bool) {
@@ -377,7 +379,7 @@ func findBackbone(bestTree *tree.Tree, edgeScores [][2]int, post, pre []int) [2]
 			// fmt.Printf("HERE!! %d\n", root.Nneigh())
 			left := score + scoresPost[edges[0].Id()] + post[edges[1].Id()]
 			right := score + scoresPost[edges[1].Id()] + post[edges[0].Id()]
-			fmt.Printf("root: left %d, right %d\n", left, right)
+			// fmt.Printf("root: left %d, right %d\n", left, right)
 			if left >= right {
 				scoresPre[e.Id()] = left
 				preStarts[e.Id()] = postStarts[edges[0].Id()]
@@ -401,7 +403,7 @@ func findBackbone(bestTree *tree.Tree, edgeScores [][2]int, post, pre []int) [2]
 		}
 		return true
 	})
-	fmt.Println("pre scores", scoresPre)
+	// fmt.Println("pre scores", scoresPre)
 
 	// find maximum over all possible backbones
 	maxScore := 0            // best possible score for a backbone

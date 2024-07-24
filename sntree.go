@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 
 	"github.com/evolbioinfo/goalign/align"
 	"github.com/evolbioinfo/gotree/tree"
@@ -16,19 +16,19 @@ func SNTree(aln align.Alignment) *tree.Tree {
 		taxaNames[i] = seq.Name()
 	}
 	snSplits := snSplits(aln)
-	fmt.Printf("sn-splits %v\n", snSplits)
-	PrintSplits(snSplits)
+	// fmt.Printf("sn-splits %v\n", snSplits)
+	// PrintSplits(snSplits)
 	snTree, err := BuildTree(snSplits, taxaNames)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(snTree)
+	// fmt.Println(snTree)
 	return snTree
 }
 
 func snSplits(aln align.Alignment) []*Split {
 	splits, err := CreateSplits(aln, nil)
-	PrintSplits(splits)
+	// PrintSplits(splits)
 	if err != nil { // shouldn't happen
 		panic(err)
 	}
@@ -37,7 +37,7 @@ func snSplits(aln align.Alignment) []*Split {
 	for i := 0; i < len(splits); i++ {
 		// if !conflicts[i] {
 		for j := i + 1; j < len(splits); j++ {
-			fmt.Println("pair", i, j)
+			// fmt.Println("pair", i, j)
 			if b, err := splits[i].Conflict(splits[j]); err != nil {
 				panic(err)
 			} else if b {
@@ -51,7 +51,7 @@ func snSplits(aln align.Alignment) []*Split {
 	result := []*Split{}
 	for i := range len(splits) {
 		if !conflicts[i] {
-			fmt.Println(i)
+			// fmt.Println(i)
 			result = append(result, splits[i])
 		}
 	}

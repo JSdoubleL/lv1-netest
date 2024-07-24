@@ -1,4 +1,4 @@
-module lv1-netgen
+module lv1-netest
 
 go 1.22.4
 
